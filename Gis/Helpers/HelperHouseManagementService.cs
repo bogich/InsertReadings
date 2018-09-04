@@ -255,16 +255,12 @@ namespace Gis.Helpers.HelperHouseManagementService
         /// <summary>
         /// Импорт новостей для информирования граждан
         /// </summary>
-        /// <param name="_orgPPAGUID">
-        /// Идентификатор зарегистрированной организации
-        /// </param>
-        /// <param name="_FIASHouseGuid">
-        /// Глобальный уникальный идентификатор дома по ФИАС
-        /// </param>
-        /// <returns>
-        /// Статус обработки импорта данных при синхронном обмене
-        /// </returns>
-        public importNotificationDataResponse SetNotificationData(string _orgPPAGUID, string _FIASHouseGuid, string _content)
+        /// <param name="_orgPPAGUID">Идентификатор зарегистрированной организации</param>
+        /// <param name="_FIASHouseGuid">Глобальный уникальный идентификатор дома по ФИАС</param>
+        /// <param name="_content">Текст новости</param>
+        /// <param name="_isNotLimit">Не ограничено</param>
+        /// <returns>Статус обработки импорта данных при синхронном обмене</returns>
+        public importNotificationDataResponse SetNotificationData(string _orgPPAGUID, string _FIASHouseGuid, string _content, bool _isNotLimit)
         {
             var srvHouseMgmt = new HouseManagementPortsTypeClient();
             srvHouseMgmt.ClientCredentials.UserName.UserName = ConfigurationManager.AppSettings["_login"];
@@ -305,14 +301,92 @@ namespace Gis.Helpers.HelperHouseManagementService
                                 Items1ElementName = new Items1ChoiceType[]
                                 {
                                     Items1ChoiceType.IsNotLimit //Период актуальности - не ограничено
-                                    //Items1ChoiceType.StartDate,
-                                    //Items1ChoiceType.EndDate
                                 },
                                 Items1 = new object[]
                                 {
-                                    true
-                                    //DateTime.Now,
-                                    //DateTime.Now.AddDays(60)
+                                    _isNotLimit
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+
+            importNotificationDataResponse resHouseMgmt = null;
+            do
+            {
+                try
+                {
+                    resHouseMgmt = srvHouseMgmt.importNotificationData(reqHouseMgmtNotificationfData);
+                }
+                catch (Exception e)
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine(e.Message);
+                    Console.ResetColor();
+                    Thread.Sleep(1000);
+                }
+            }
+            while (resHouseMgmt is null);
+
+            return resHouseMgmt;
+        }
+
+        /// <summary>
+        /// Импорт новости для информирования граждан
+        /// </summary>
+        /// <param name="_orgPPAGUID">Идентификатор зарегистрированной организации</param>
+        /// <param name="_FIASHouseGuid">Глобальный уникальный идентификатор дома по ФИАС</param>
+        /// <param name="_content">Текст новости</param>
+        /// <param name="_perDay">Период действия (в сутках)</param>
+        /// <returns></returns>
+        public importNotificationDataResponse SetNotificationData(string _orgPPAGUID, string _FIASHouseGuid, string _content, double _perDay)
+        {
+            var srvHouseMgmt = new HouseManagementPortsTypeClient();
+            srvHouseMgmt.ClientCredentials.UserName.UserName = ConfigurationManager.AppSettings["_login"];
+            srvHouseMgmt.ClientCredentials.UserName.Password = ConfigurationManager.AppSettings["_pass"];
+
+            var reqHouseMgmtNotificationfData = new importNotificationDataRequest
+            {
+                RequestHeader = new RequestHeader
+                {
+                    Date = DateTime.Now,
+                    MessageGUID = Guid.NewGuid().ToString(),
+                    ItemElementName = ItemChoiceType2.orgPPAGUID,
+                    Item = _orgPPAGUID
+                },
+                importNotificationRequest = new importNotificationRequest
+                {
+                    version = "11.6.0.2",
+                    Id = CryptoConsts.CONTAINER_ID,
+                    notification = new importNotificationRequestNotification[]
+                    {
+                        new importNotificationRequestNotification
+                        {
+                            TransportGUID = Guid.NewGuid().ToString(),
+                            Item = new importNotificationRequestNotificationCreate
+                            {
+                                Topic = "Поверка прибора учета",
+                                content = _content,
+                                IsShipOffSpecified = true,
+                                IsShipOff = true, //Направить новость адресатам
+                                ItemsElementName = new ItemsChoiceType14[]
+                                {
+                                    ItemsChoiceType14.FIASHouseGuid //Отпарвляем новость жителям дома
+                                },
+                                Items = new object[]
+                                {
+                                    _FIASHouseGuid //FIASGUID дома, для которого отправляем новость
+                                },
+                                Items1ElementName = new Items1ChoiceType[]
+                                {
+                                    Items1ChoiceType.StartDate,
+                                    Items1ChoiceType.EndDate
+                                },
+                                Items1 = new object[]
+                                {
+                                    DateTime.Now.AddMinutes(1),
+                                    DateTime.Now.AddDays(_perDay)
                                 }
                             }
                         }
