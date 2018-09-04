@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ServiceModel;
 using Gis.Crypto;
 using Gis.Infrastructure.DeviceMeteringService;
 using System.Configuration;
@@ -133,6 +134,15 @@ namespace Gis.Helpers.HelperDeviceMeteringService
                     Console.WriteLine(e.Message);
                     Console.ResetColor();
                     Thread.Sleep(1000);
+
+                    if (e.GetType() == typeof(FaultException<Fault>))
+                    {
+                        //Если превышено время обработки запроса, то меняем его идентификатор, что бы не выполнялось два одинаковых запроса одновременно
+                        if (((FaultException<Fault>)e).Detail.ErrorCode.Equals("EXP002002"))
+                        {
+                            reqDeviceMeteringExp.RequestHeader.MessageGUID = Guid.NewGuid().ToString();
+                        }
+                    }
                 }
             }
             while (resDeviceMeteringExp is null);
