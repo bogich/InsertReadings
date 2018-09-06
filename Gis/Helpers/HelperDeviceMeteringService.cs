@@ -276,13 +276,10 @@ namespace Gis.Helpers.HelperDeviceMeteringService
                             Item1 = new importMeteringDeviceValuesRequestMeteringDevicesValuesOneRateDeviceValue
                             {
                                 CurrentValue = new OneRateMeteringValueImportType[]
-                                //CurrentValue = new importMeteringDeviceValuesRequestMeteringDevicesValuesOneRateDeviceValueCurrentValue[]
                                 {
                                     new OneRateMeteringValueImportType
-                                    //new importMeteringDeviceValuesRequestMeteringDevicesValuesOneRateDeviceValueCurrentValue
                                     {
                                         TransportGUID = Guid.NewGuid().ToString(),
-                                        //orgPPAGUID = _orgPPAGUID,
                                         DateValue = _DateValue,
                                         MeteringValue = _MeteringValue,
                                         MunicipalResource = new nsiRef
@@ -312,6 +309,15 @@ namespace Gis.Helpers.HelperDeviceMeteringService
                     Console.WriteLine(e.Message);
                     Console.ResetColor();
                     Thread.Sleep(1000);
+
+                    if (e.GetType() == typeof(FaultException<Fault>))
+                    {
+                        //Обработка ошибки EXP001000 в случае, когда передача данных не произошла
+                        if (((FaultException<Fault>)e).Detail.ErrorCode.Equals("EXP001000"))
+                        {
+                            reqDeviceMeteringImp.RequestHeader.MessageGUID = Guid.NewGuid().ToString();
+                        }
+                    }
                 }
             }
             while (resMeteringDeviceImp is null);
